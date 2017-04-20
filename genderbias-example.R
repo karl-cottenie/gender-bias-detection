@@ -1,4 +1,7 @@
+#pull test2 3
+
 # 1. Loading necessary libraries ------
+install.packages("gender")
 library(gender)
 library(tidyverse)
 
