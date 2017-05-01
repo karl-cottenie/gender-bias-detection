@@ -1,5 +1,3 @@
-#pull test2 3
-
 # 1. Loading necessary libraries ------
 
 # uncomment line below if the gender package is not installed yet
