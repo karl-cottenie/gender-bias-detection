@@ -1,9 +1,13 @@
 #pull test2 3
 
 # 1. Loading necessary libraries ------
-install.packages("gender")
+
+# uncomment line below if the gender package is not installed yet
+# install.packages("gender")
 library(gender)
+library(plyr)
 library(tidyverse)
+
 
 # 2. Read in data and obtain gender based on first name ----------------
 
@@ -54,9 +58,9 @@ gender.test = function(x){
     # See http://www.stata-journal.com/article.html?article=st0253
     # TODO: is this the correct implementation of the STATA article?
     result = wilcox.test(ranking ~ gender, alternative = "greater", exact = T, data = x)
-    c(p.value = result$p.value, effect.size = result$statistic/(groups[1]*groups[2]),
-      samplesize = groups[1] + groups[2], prop.female = groups[1]/(groups[1]+groups[2]))
-    # TODO: why are the variable names changed?
+    c(p.value = result$p.value, effect.size = unname(result$statistic/(groups[1]*groups[2])),
+      sample.size = unname(groups[1] + groups[2]), prop.female = unname(groups[1]/(groups[1]+groups[2])))
+    # TODO: why are the variable names changed? Solved w/ unname
   }
 }
 
@@ -67,11 +71,12 @@ gender.test(prob2) # effect size corresponds! => function works correctly
 # 5.GSC gender bias calculations -------------
 
 # Apply gender.test function to each award
-summary.gender.gsc = as.data.frame(t(sapply(split(gsc.combined, gsc.combined$yearaward), gender.test)))
-# TODO: Can I pipe these type of functions?
+# summary.gender.gsc = as.data.frame(t(sapply(split(gsc.combined, gsc.combined$yearaward), gender.test)))
+# TODO: Can I pipe these type of functions? yes, see code below
 
-summary.gender.gsc$yearaward = row.names(summary.gender.gsc) # add unique ID to data frame
-summary.gender.gsc
+summary.gender.gsc = gsc.combined %>% split(.$yearaward) %>%
+  map(gender.test) %>% ldply()
+
 
 # 6. Analysis --------
 
@@ -81,10 +86,10 @@ abline(h = 0.05) # distribution of the p-values
 title("P-values of effect sizes per ranking exercise")
 
 # What is the gender bias effect size?
-boxplot(summary.gender.gsc$effect.size.W, ylim = c(0,1))
+boxplot(summary.gender.gsc$effect.size, ylim = c(0,1))
 abline(h = 0.5) # distribution of the p-values
 title("Effect size: probability that a female grad student \n has a higher ranking than a male graduate student")
 
 # Is there evidence across all ranking exercises combined (i.e. a meta-analysis)?
-t.test(summary.gender.gsc$effect.size.W, alternative = "greater", mu = 0.5)
+t.test(summary.gender.gsc$effect.size, alternative = "greater", mu = 0.5)
 # p-value = 0.49, perfect, because names were randomly distributed
